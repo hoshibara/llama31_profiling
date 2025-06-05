@@ -14,9 +14,12 @@ PROFILE_DIR="$SHELL_DIR/logs/${MODEL_CONFIG_NAME}_COMPILE_${USE_COMPILE}/${TIMES
 mkdir -p "$PROFILE_DIR"
 export PROFILE_DIR
 
-# 然后再调用你的 Python 脚本
+echo "Running with USE_COMPILE=$USE_COMPILE"
+START_TIME=$(date +%s)
 ONEDNN_VERBOSE=all python -u llama31_inner_profile.py >> "$PROFILE_DIR/onednn.verbose.log" 2>&1
-
+END_TIME=$(date +%s)
+DURATION=$((END_TIME - START_TIME))
+echo "Execution time (USE_COMPILE=$USE_COMPILE): ${DURATION}s" | tee -a "$PROFILE_DIR/onednn.verbose.log"
 
 USE_COMPILE="False"
 export USE_COMPILE
@@ -24,4 +27,9 @@ PROFILE_DIR="$SHELL_DIR/logs/${MODEL_CONFIG_NAME}_COMPILE_${USE_COMPILE}/${TIMES
 mkdir -p "$PROFILE_DIR"
 export PROFILE_DIR
 
+echo "Running with USE_COMPILE=$USE_COMPILE"
+START_TIME=$(date +%s)
 ONEDNN_VERBOSE=all python -u llama31_inner_profile.py >> "$PROFILE_DIR/onednn.verbose.log" 2>&1
+END_TIME=$(date +%s)
+DURATION=$((END_TIME - START_TIME))
+echo "Execution time (USE_COMPILE=$USE_COMPILE): ${DURATION}s" | tee -a "$PROFILE_DIR/onednn.verbose.log"
