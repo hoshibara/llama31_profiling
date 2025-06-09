@@ -72,10 +72,12 @@ def main():
 
     # Tokenize input
     
-    inputs = tokenizer(PROMPT, return_tensors="pt", max_length=INPUT_ID_LENGTH_DICT[MODEL_CONFIG_NAME]).to(DEVICE)
+    single_input = tokenizer(PROMPT, return_tensors="pt", max_length=INPUT_ID_LENGTH_DICT[MODEL_CONFIG_NAME]).to(DEVICE)
+    
+    batch_inputs = {k: v.expand(4, -1).to(DEVICE) for k, v in single_input.items()}
     
     outputs = model.generate(
-        **inputs,
+        **batch_inputs,
         max_new_tokens=MAX_NEW_TOKENS,
         use_cache=True,
         do_sample=False,
