@@ -25,3 +25,7 @@ pip install --pre torchvision torchaudio --index-url https://download.pytorch.or
 
 pip install transformers
 ```
+
+```
+bash llama31_innter.sh
+```
