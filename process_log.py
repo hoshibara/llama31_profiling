@@ -29,6 +29,29 @@ def process_onednn_log(file_path, output_dir):
     except Exception as e:
         print(f"Error processing '{file_path}': {e}")
         return False
+    
+def parse_time_string(time_str: str) -> float:
+    """
+    将时间字符串（例如 '1.044ms', '0.000us'）解析为纳秒 (ns)。
+    如果无法解析或为 '--'，则返回 0.0。
+    """
+    time_str = time_str.strip().lower()
+    if not time_str or time_str == "--":
+        return 0.0
+
+    match = re.match(r'([\d.]+)\s*(ns|us|ms|s)?', time_str)
+    if match:
+        value = float(match.group(1))
+        unit = match.group(2) # Group 2 is optional, so it can be None
+        if unit == 'ns' or unit is None:
+            return value
+        if unit == 'us':
+            return value * 1000
+        elif unit == 'ms':
+            return value * 1000 * 1000
+        elif unit == 's':
+            return value * 1000 * 1000 * 1000
+    return 0.0 # 无法解析的格式也视为0
 
 def process_torch_profile(file_path, output_dir):
     output_filename = os.path.join(output_dir, os.path.basename(file_path) + ".parsed.csv")
@@ -86,11 +109,13 @@ def process_torch_profile(file_path, output_dir):
 
         results.append({
             'Name': row.get('Name', ''),
-            'Input Shapes': row.get('Input Shapes', '[]')
+            'Input Shapes': row.get('Input Shapes', '[]'),
+            'XPU total': parse_time_string(row.get('XPU total', '0.0')),
         })
 
     # 去重 + 排序
     global all_deduped
+    results = list(filter(lambda x: x['XPU total'] > 0, results))  # 只保留 XPU total > 0 的行
     deduped = sorted(set((r['Name'], r['Input Shapes']) for r in results))
     all_deduped.update(deduped)  # 更新全局去重集合
 
