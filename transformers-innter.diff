@@ -1,0 +1,69 @@
+diff --git a/src/transformers/generation/utils.py b/src/transformers/generation/utils.py
+index 4a549fc215..699e46f81f 100644
+--- a/src/transformers/generation/utils.py
++++ b/src/transformers/generation/utils.py
+@@ -13,6 +13,8 @@
+ # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ # See the License for the specific language governing permissions and
+ # limitations under the License.
++PRINT_COUNT = 0
++
+ import copy
+ import inspect
+ import os
+@@ -3599,12 +3601,49 @@ class GenerationMixin(ContinuousMixin):
+             # prepare variable output controls (note: some models won't accept all output controls)
+             model_inputs.update({"output_attentions": output_attentions} if output_attentions else {})
+             model_inputs.update({"output_hidden_states": output_hidden_states} if output_hidden_states else {})
+-
+-            if is_prefill:
+-                outputs = self(**model_inputs, return_dict=True)
+-                is_prefill = False
+-            else:
+-                outputs = model_forward(**model_inputs, return_dict=True)
++            
++            global PRINT_COUNT
++            PRINT_COUNT += 1
++            from torch.profiler import profile, ProfilerActivity
++            import time
++            schedule = torch.profiler.schedule(wait=0, warmup=0, active=1)
++            PROFILE_DIR = os.environ.get("PROFILE_DIR", "/tmp/profile")
++            
++            start_time = time.time()
++            with profile(
++                activities=[ProfilerActivity.CPU, ProfilerActivity.XPU],
++                record_shapes=True,
++                with_stack=True,
++                with_flops=True,
++                schedule=schedule,
++                on_trace_ready=torch.profiler.tensorboard_trace_handler(PROFILE_DIR, worker_name=f"token_{PRINT_COUNT}"),
++            ) as prof:
++                if is_prefill:
++                    outputs = self(**model_inputs, return_dict=True)
++                    is_prefill = False
++                else:
++                    outputs = model_forward(**model_inputs, return_dict=True)
++            
++            end_time = time.time()
++            print(f"[Timer] Elapsed time: {end_time - start_time:.6f} seconds")
++            
++            print(f"\n==== Token {PRINT_COUNT} ====")
++            print(prof.key_averages().table(sort_by="xpu_time_total", row_limit=20))
++            token_file_path = os.path.join(PROFILE_DIR, f"token_{PRINT_COUNT}_profile.txt")
++            with open(token_file_path, "w") as f:
++                # Save to file without row limit and with extended column width
++                f.write(prof.key_averages(group_by_input_shape=True).table(sort_by="xpu_time_total", row_limit=-1, max_name_column_width=300, max_shapes_column_width=300))
++            print(f"Token {PRINT_COUNT} profiling results saved to: {token_file_path}")
++            
++            # import time
++            # start_time = time.time()
++            # if is_prefill:
++            #     outputs = self(**model_inputs, return_dict=True)
++            #     is_prefill = False
++            # else:
++            #     outputs = model_forward(**model_inputs, return_dict=True)
++            # end_time = time.time()
++            # print(f"[Timer] Elapsed time: {end_time - start_time:.6f} seconds")
+ 
+             # synced_gpus: don't waste resources running the code we don't need; kwargs must be updated before skipping
+             model_kwargs = self._update_model_kwargs_for_generation(
