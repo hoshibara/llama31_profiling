@@ -15,6 +15,10 @@ PROFILE_DIR="$SHELL_DIR/logs/${MODEL_CONFIG_NAME}_COMPILE_${USE_COMPILE}/${TIMES
 mkdir -p "$PROFILE_DIR"
 export PROFILE_DIR
 
+echo "Collecting pytorch environment information..."
+python collect_env.py >> "$PROFILE_DIR/pytorch_env_info.log" 2>&1
+echo "Finished collecting pytorch environment information."
+
 echo "Running with USE_COMPILE=$USE_COMPILE"
 START_TIME=$(date +%s)
 ONEDNN_VERBOSE=all python -u llama31_inner_profile.py >> "$PROFILE_DIR/onednn.verbose.log" 2>&1
@@ -28,6 +32,10 @@ export USE_COMPILE
 PROFILE_DIR="$SHELL_DIR/logs/${MODEL_CONFIG_NAME}_COMPILE_${USE_COMPILE}/${TIMESTAMP}"
 mkdir -p "$PROFILE_DIR"
 export PROFILE_DIR
+
+echo "Collecting pytorch environment information..."
+python collect_env.py >> "$PROFILE_DIR/pytorch_env_info.log" 2>&1
+echo "Finished collecting pytorch environment information."
 
 echo "Running with USE_COMPILE=$USE_COMPILE"
 START_TIME=$(date +%s)
